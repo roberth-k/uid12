@@ -26,13 +26,16 @@ func Test_rfc4648(t *testing.T) {
 		{"", 0x1000000000000001},
 		{"QAAAAAAAAAAB", 0x0800000000000001},
 		{"CEIRCEIRCEIR", 0x0111111111111111},
+		{"CEIRCEIRCEI@", Zero},
 	}
 
 	for _, test := range tests {
 		t.Run(
 			fmt.Sprintf("%s 0x%016X", test.s, int64(test.v)),
 			func(t *testing.T) {
-				assert.Equal(t, test.s, rfc4648Encode(test.v))
+				if test.v != Zero {
+					assert.Equal(t, test.s, rfc4648Encode(test.v))
+				}
 
 				if test.s != "" {
 					assert.Equal(t, test.v, rfc4648Decode(test.s))

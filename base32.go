@@ -31,13 +31,21 @@ func rfc4648Decode(str string) Value {
 
 	v := int64(0)
 
-	digit := rfc4648DecodingAlphabet[str[0]]
+	ch := str[0]
+	digit := rfc4648DecodingAlphabet[ch]
 	v |= digit
+	if digit == 0 && ch != 'A' && ch != 'a' {
+		return Zero
+	}
 
 	for i := 1; i < 12; i++ {
-		// todo: detect invalid digit
-		digit := rfc4648DecodingAlphabet[str[i]]
+		ch = str[i]
+		digit = rfc4648DecodingAlphabet[ch]
 		v = (v << 5) | digit
+
+		if digit == 0 && ch != 'A' && ch != 'a' {
+			return Zero
+		}
 	}
 
 	return Value(v)
