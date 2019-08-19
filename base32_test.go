@@ -9,10 +9,13 @@ import (
 	"time"
 )
 
-func Test_rfc4648Encode(t *testing.T) {
+func Test_rfc4648(t *testing.T) {
+	assert.Equal(t, "", rfc4648Encode(Zero))
+	assert.Equal(t, Zero, rfc4648Decode(""))
+
 	tests := []struct {
-		expect string
-		input  Value
+		s string
+		v Value
 	}{
 		{"", Zero},
 		{"AAAAAAAAAAAB", MinValue},
@@ -27,21 +30,19 @@ func Test_rfc4648Encode(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(
-			fmt.Sprintf("0x%016X", int64(test.input)),
+			fmt.Sprintf("%s 0x%016X", test.s, int64(test.v)),
 			func(t *testing.T) {
-				assert.Equal(t, test.expect, rfc4648Encode(test.input))
-				if test.expect != "" {
-					assert.Equal(t, stdEncode(test.input), test.expect)
+				assert.Equal(t, test.s, rfc4648Encode(test.v))
+
+				if test.s != "" {
+					assert.Equal(t, test.v, rfc4648Decode(test.s))
+				}
+
+				if test.s != "" && test.v != Zero {
+					assert.Equal(t, stdEncode(test.v), test.s)
+					assert.Equal(t, stdDecode(test.s), test.v)
 				}
 			})
-	}
-}
-
-var benchValue = Value(time.Now().UnixNano()) & MaxValue
-
-func Benchmark_rfc4648Encode(b *testing.B) {
-	for n := 0; n < b.N; n++ {
-		rfc4648Encode(benchValue)
 	}
 }
 
@@ -49,12 +50,41 @@ func stdEncode(value Value) string {
 	var data [8]byte
 	// move 4 bits to the left to work around 8-byte padding behaviour
 	binary.BigEndian.PutUint64(data[:], uint64(value)<<4)
-	str := base32.StdEncoding.EncodeToString(data[:])[0:12]
-	return str
+	str := base32.StdEncoding.EncodeToString(data[:])
+	return str[0:12]
+}
+
+func stdDecode(str string) Value {
+	// todo: is the string append slowing the benchmark?
+	decoded, _ := base32.StdEncoding.DecodeString(str + "A===")
+	return Value(binary.BigEndian.Uint64(decoded[0:8]) >> 4)
+}
+
+var (
+	encodeBenchValue = Value(time.Now().UnixNano()) & MaxValue
+	decodeBenchValue = stdEncode(encodeBenchValue)
+)
+
+func Benchmark_rfc4648Encode(b *testing.B) {
+	for n := 0; n < b.N; n++ {
+		rfc4648Encode(encodeBenchValue)
+	}
 }
 
 func Benchmark_base32StdEncode(b *testing.B) {
 	for n := 0; n < b.N; n++ {
-		stdEncode(benchValue)
+		stdEncode(encodeBenchValue)
+	}
+}
+
+func Benchmark_rfc4648Decode(b *testing.B) {
+	for n := 0; n < b.N; n++ {
+		rfc4648Decode(decodeBenchValue)
+	}
+}
+
+func Benchmark_base32StdDecode(b *testing.B) {
+	for n := 0; n < b.N; n++ {
+		stdDecode(decodeBenchValue)
 	}
 }
