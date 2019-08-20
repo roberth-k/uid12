@@ -5,45 +5,67 @@ import (
 	"encoding/binary"
 	"fmt"
 	"github.com/stretchr/testify/assert"
+	"strings"
 	"testing"
 	"time"
 )
 
-func Test_rfc4648(t *testing.T) {
-	assert.Equal(t, "", rfc4648Encode(Zero))
-	assert.Equal(t, Zero, rfc4648Decode(""))
-
+func Test_rfc4648Encode(t *testing.T) {
 	tests := []struct {
 		s string
 		v Value
 	}{
-		{"", Zero},
-		{"AAAAAAAAAAAB", MinValue},
-		{"777777777777", MaxValue},
+		{"AAAAAAAAAAAA", Zero},
+		{"AAAAAAAAAAAA", MinValue},
+		{"77777777776U", MaxValue},
 		{"", -1},
 		{"", 0x4000000000000001},
 		{"", 0x2000000000000001},
 		{"", 0x1000000000000001},
 		{"QAAAAAAAAAAB", 0x0800000000000001},
 		{"CEIRCEIRCEIR", 0x0111111111111111},
-		{"CEIRCEIRCEI@", Zero},
 	}
 
-	for _, test := range tests {
+	for i, test := range tests {
 		t.Run(
-			fmt.Sprintf("%s 0x%016X", test.s, int64(test.v)),
+			fmt.Sprintf("%d: %s - 0x%016X", i, test.s, int64(test.v)),
 			func(t *testing.T) {
-				if test.v != Zero {
-					assert.Equal(t, test.s, rfc4648Encode(test.v))
-				}
-
-				if test.s != "" {
-					assert.Equal(t, test.v, rfc4648Decode(test.s))
-				}
-
+				assert.Equal(t, test.s, rfc4648Encode(test.v))
 				if test.s != "" && test.v != Zero {
 					assert.Equal(t, stdEncode(test.v), test.s)
-					assert.Equal(t, stdDecode(test.s), test.v)
+				}
+			})
+	}
+}
+
+func Test_rfc4648Decode(t *testing.T) {
+	tests := []struct {
+		v Value
+		s string
+	}{
+		{Zero, ""},
+		{MinValue, "AAAAAAAAAAAA"},
+		{MaxValue, "77777777776U"},
+		{0x0800000000000001, "QAAAAAAAAAAB"},
+		{0x0111111111111111, "CEIRCEIRCEIR"},
+		{0x0111111111111111, "CE1RCE1RCE1R"},
+		{Zero, "@EIRCEIRCEIR"},
+		{Zero, "CEIRCE@RCEIR"},
+		{Zero, "CEIRCEIRCEI@"},
+	}
+
+	for i, test := range tests {
+		t.Run(
+			fmt.Sprintf("%d: 0x%016X - %s", i, int64(test.v), test.s),
+			func(t *testing.T) {
+				assert.Equal(t, test.v, rfc4648Decode(test.s))
+				if test.s != "" && test.v != Zero {
+					// the base32.StdEncoding doesn't support the aliases
+					s := strings.ReplaceAll(test.s, "1", "I")
+					s = strings.ReplaceAll(s, "0", "O")
+					s = strings.ReplaceAll(s, "8", "B")
+					s = strings.ReplaceAll(s, "9", "P")
+					assert.Equal(t, stdDecode(s), test.v)
 				}
 			})
 	}
