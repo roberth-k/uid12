@@ -5,8 +5,6 @@ import (
 	"math/rand"
 )
 
-var globalSource = NewSource()
-
 func NewSource() *Source {
 	return NewSourceWith(nil, nil)
 }
@@ -35,10 +33,18 @@ type Source struct {
 }
 
 func (source Source) Generate() Value {
+	// 31 bits of time
 	ts := source.clock.Now().Unix() & math.MaxInt32
-	nonce := (source.random.Int63() << 6) & 0xffffffc0
-	value := (ts << 32) | nonce
+
+	// 23 bits of entropy
+	nonce := source.random.Int63() & 0x1fffffc0
+
+	// as the ts is signed, we gain one bit by shifting off the sign
+	value := (ts << 29) | nonce
+
+	// 6 bits of checksum
 	checksum := value % 37
 	value = value | (checksum & 0x3f)
+
 	return Value(value)
 }

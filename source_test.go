@@ -42,21 +42,24 @@ func TestSource_Generate(t *testing.T) {
 		m int64     // mask
 	}{
 		{0x0000000000000000, time.Unix(0, 0), 0, all},
-		{0x0000000000000040, time.Unix(0, 0), 1, nochecksum},
-		{0x000000000000005b, time.Unix(0, 0), 1, all},
-		{0x000000000000001b, time.Unix(0, 0), 1, checksum},
-		{0x00000000ffffffc0, time.Unix(0, 0), math.MaxInt64, nochecksum},
-		{0x7fffffff00000000, time.Unix(math.MaxInt32, 0), 0, nochecksum},
+		{0x0000000000000040, time.Unix(0, 0), 0x40, nochecksum},
+		{0x000000000000005b, time.Unix(0, 0), 0x40, all},
+		{0x000000000000001b, time.Unix(0, 0), 0x40, checksum},
+		{0x000000001fffffc0, time.Unix(0, 0), math.MaxInt64, nochecksum},
+		{0x0fffffffe0000000, time.Unix(math.MaxInt32, 0), 0, nochecksum},
 	}
 
-	for _, test := range tests {
+	for i, test := range tests {
 		t.Run(
-			fmt.Sprintf("%s (0x%016X)", Value(test.e), test.e),
+			fmt.Sprintf("%d: %s (0x%016X)", i, Value(test.e), test.e),
 			func(t *testing.T) {
 				clock := fixedClock{test.t}
 				random := fixedRandom{test.r}
 				source := NewSourceWith(random, clock)
-				assert.Equal(t, test.e, int64(source.Generate())&test.m)
+
+				v := source.Generate()
+				assert.Equal(t, test.e, int64(v)&test.m, "got 0x%016X", int64(v)&test.m)
+				assert.Equal(t, test.t, v.Time())
 			})
 	}
 }
