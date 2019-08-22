@@ -1,18 +1,24 @@
 package uid12
 
+// Q: Why not use base32.StdEncoding?
+// A: The uid12 encoder is more terse, as it can make assumptions
+//    about the size and shape of the value to encode. It also implements
+//    aliases like I and 1, and O and 0, at no extra cost.
+//    Benchmarks show ~2x improvement on encode and ~10x improvement
+//    on decode (though this last one might be a benchmark error).
+
 const digitMask = 0x1f
 
-func rfc4648Encode(value Value) string {
-	// Q: Why not use base32.StdEncoding?
-	// A: The uid12 encoder can be more terse, as it can make assumptions
-	//    about the size and shape of the value to encode.
-	//    Benchmarks show ~2x improvement.
-
+func rfc4648EncodeTo(value Value, encoded []byte) {
 	if value < MinValue || value > MaxValue {
-		return ""
+		return
 	}
 
-	var encoded [12]byte
+	if len(encoded) < 12 {
+		// bounds hint
+		return
+	}
+
 	v := int64(value)
 
 	for i := 11; i >= 0; i-- {
@@ -20,7 +26,15 @@ func rfc4648Encode(value Value) string {
 		encoded[i] = rfc4648EncodingAlphabet[digit]
 		v >>= 5
 	}
+}
 
+func rfc4648Encode(value Value) string {
+	if value < MinValue || value > MaxValue {
+		return ""
+	}
+
+	var encoded [12]byte
+	rfc4648EncodeTo(value, encoded[:])
 	return string(encoded[:])
 }
 
