@@ -1,5 +1,9 @@
 package uid12
 
+import (
+	"time"
+)
+
 type Value int64
 
 const (
@@ -14,4 +18,23 @@ const (
 
 func (value Value) String() string {
 	return rfc4648Encode(value)
+}
+
+func (value Value) Check() bool {
+	checksum := value & 0x3f
+	v := value & 0x7fffffffffffffc0
+	return v%37 == checksum
+}
+
+func (value Value) Time() time.Time {
+	ts := (int64(value) >> 29) & 0x7fffffff
+	return time.Unix(ts, 0)
+}
+
+func (value Value) Nonce() int64 {
+	return int64(value) & 0xffffffc0
+}
+
+func (value Value) Checksum() int64 {
+	return int64(value) & 0x3f
 }
