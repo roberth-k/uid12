@@ -61,10 +61,10 @@ func Test_rfc4648Decode(t *testing.T) {
 				assert.Equal(t, test.v, rfc4648Decode(test.s))
 				if test.s != "" && test.v != Zero {
 					// the base32.StdEncoding doesn't support the aliases
-					s := strings.ReplaceAll(test.s, "1", "I")
-					s = strings.ReplaceAll(s, "0", "O")
-					s = strings.ReplaceAll(s, "8", "B")
-					s = strings.ReplaceAll(s, "9", "P")
+					s := strings.Replace(test.s, "1", "I", -1)
+					s = strings.Replace(s, "0", "O", -1)
+					s = strings.Replace(s, "8", "B", -1)
+					s = strings.Replace(s, "9", "P", -1)
 					assert.Equal(t, stdDecode(s), test.v)
 				}
 			})
